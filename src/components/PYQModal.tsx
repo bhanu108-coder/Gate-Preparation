@@ -15,6 +15,37 @@ export const PYQModal: React.FC<PYQModalProps> = ({ pyq, onClose, onUpdatePYQ })
   const [selectedOption, setSelectedOption] = useState<number | undefined>(pyq.userSelectedOption);
   const [showExplanation, setShowExplanation] = useState<boolean>(pyq.status === 'Solved' || pyq.userSelectedOption !== undefined);
   const [isFlagged, setIsFlagged] = useState<boolean>(pyq.status === 'Flagged');
+  const [aiDoubtText, setAiDoubtText] = useState('');
+  const [aiExplanation, setAiExplanation] = useState<string | null>(null);
+  const [isAiLoading, setIsAiLoading] = useState(false);
+
+  const handleAskGemini = async (customPrompt?: string) => {
+    const questionToAsk = customPrompt || aiDoubtText || `Explain in detail why option (${String.fromCharCode(65 + pyq.correctOptionIndex)}) is the correct answer, break down the mathematical derivation, and explain why the other options are wrong or subtle traps.`;
+    setIsAiLoading(true);
+    try {
+      const res = await fetch('/api/gemini/ask-doubt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: questionToAsk,
+          context: `GATE PYQ (${pyq.year} - ${pyq.subject} - ${pyq.topic}). Question: "${pyq.questionText}". Options: ${pyq.options.map((o, i) => `(${String.fromCharCode(65 + i)}) ${o}`).join(' | ')}. Correct option: (${String.fromCharCode(65 + pyq.correctOptionIndex)})`,
+          lectureTitle: `${pyq.subject} PYQs`,
+          timestamp: `${pyq.year}`,
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setAiExplanation(data.answer || 'Detailed Gemini analysis.');
+      } else {
+        setAiExplanation('Gemini AI could not be reached. Please verify your Google Gemini API Key.');
+      }
+    } catch (err) {
+      setAiExplanation('Network error connecting to Gemini API.');
+    } finally {
+      setIsAiLoading(false);
+    }
+  };
 
   const handleSelectOption = (index: number) => {
     setSelectedOption(index);
@@ -196,6 +227,68 @@ export const PYQModal: React.FC<PYQModalProps> = ({ pyq, onClose, onUpdatePYQ })
                   </p>
                 </div>
               )}
+
+              {/* Gemini AI Deep Dive & Doubt Solver */}
+              <div className="bg-[#121214] border border-[#27272A] rounded-xl p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-[#60A5FA]">
+                    <Sparkles className="w-4 h-4" />
+                    <h6 className="text-[13px] font-bold text-[#FAFAFA]">
+                      Ask Gemini AI Tutor for this Question
+                    </h6>
+                  </div>
+                  {!aiExplanation && (
+                    <button
+                      onClick={() => handleAskGemini()}
+                      disabled={isAiLoading}
+                      className="text-[12px] font-semibold text-[#60A5FA] hover:text-white px-2.5 py-1 bg-[#2563EB]/15 hover:bg-[#2563EB] border border-[#2563EB]/30 rounded-md transition-colors flex items-center gap-1"
+                    >
+                      <Sparkles className="w-3.5 h-3.5" />
+                      <span>{isAiLoading ? 'Analyzing...' : 'Deep Conceptual Breakdown'}</span>
+                    </button>
+                  )}
+                </div>
+
+                {aiExplanation && (
+                  <div className="bg-[#18181B] p-4 rounded-lg border border-[#27272A] text-[13px] text-[#FAFAFA] leading-relaxed space-y-2 whitespace-pre-line animate-fadeIn">
+                    <div className="flex items-center justify-between pb-2 border-b border-[#27272A] text-[11px] text-[#60A5FA] font-bold">
+                      <span>Gemini 3.7 Flash Analysis</span>
+                      <button
+                        onClick={() => handleAskGemini(`Explain why other options are distractor traps for this GATE question.`)}
+                        disabled={isAiLoading}
+                        className="text-[#A1A1AA] hover:text-[#FAFAFA] underline font-normal"
+                      >
+                        Explain Distractor Traps
+                      </button>
+                    </div>
+                    <div>{aiExplanation}</div>
+                  </div>
+                )}
+
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={aiDoubtText}
+                    onChange={(e) => setAiDoubtText(e.target.value)}
+                    placeholder="Still confused? Ask a specific question to Gemini AI..."
+                    className="flex-1 bg-[#18181B] border border-[#27272A] rounded-lg px-3 py-2 text-[12px] text-[#FAFAFA] placeholder:text-[#71717A] focus:border-[#3B82F6] outline-none"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && aiDoubtText.trim()) {
+                        e.preventDefault();
+                        handleAskGemini();
+                      }
+                    }}
+                  />
+                  <button
+                    onClick={() => handleAskGemini()}
+                    disabled={!aiDoubtText.trim() || isAiLoading}
+                    className="px-3 py-2 bg-[#2563EB] text-white rounded-lg font-semibold text-[12px] hover:bg-[#1D4ED8] disabled:opacity-40 transition-colors flex items-center gap-1"
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>Ask</span>
+                  </button>
+                </div>
+              </div>
             </div>
           )}
         </div>

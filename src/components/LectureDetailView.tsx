@@ -33,12 +33,130 @@ export const LectureDetailView: React.FC<LectureDetailViewProps> = ({
   onUpdateLecture,
   onRemoveLecture,
 }) => {
+  // Format seconds to mm:ss or hh:mm:ss
+  const formatTime = (secs: number) => {
+    const hrs = Math.floor(secs / 3600);
+    const mins = Math.floor((secs % 3600) / 60);
+    const s = Math.floor(secs % 60);
+    if (hrs > 0) {
+      return `${hrs}:${mins < 10 ? '0' : ''}${mins}:${s < 10 ? '0' : ''}${s}`;
+    }
+    return `${mins}:${s < 10 ? '0' : ''}${s}`;
+  };
+
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentSec, setCurrentSec] = useState(lecture.currentTimeSeconds || 2895); // 48:15
   const [totalSec] = useState(lecture.durationSeconds || 5055); // 1:24:15
   const [newNoteText, setNewNoteText] = useState('');
   const [activeHighlightNoteId, setActiveHighlightNoteId] = useState<string | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [rightPanelTab, setRightPanelTab] = useState<'notes' | 'ai'>('notes');
+  const [doubtQuestion, setDoubtQuestion] = useState('');
+  const [doubtHistory, setDoubtHistory] = useState<Array<{ sender: 'user' | 'ai'; text: string; time: string }>>([
+    {
+      sender: 'ai',
+      text: `Hello! I'm your **GATE Gemini AI Academic Tutor**. Ask me any doubt about **${lecture.title}**, seek clarification on formulas, or click **Formula Sheet** above!`,
+      time: 'Just now',
+    },
+  ]);
+  const [isAskingAi, setIsAskingAi] = useState(false);
+  const [isSummarizing, setIsSummarizing] = useState(false);
+
+  const handleAskDoubt = async (e?: React.FormEvent, customPrompt?: string) => {
+    if (e) e.preventDefault();
+    const promptToSend = customPrompt || doubtQuestion;
+    if (!promptToSend.trim() || isAskingAi) return;
+
+    const userEntry = {
+      sender: 'user' as const,
+      text: promptToSend,
+      time: formatTime(currentSec),
+    };
+
+    setDoubtHistory((prev) => [...prev, userEntry]);
+    if (!customPrompt) setDoubtQuestion('');
+    setIsAskingAi(true);
+
+    try {
+      const res = await fetch('/api/gemini/ask-doubt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: promptToSend,
+          context: `Subject: ${lecture.subject}, Module: ${lecture.module}`,
+          lectureTitle: lecture.title,
+          timestamp: formatTime(currentSec),
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setDoubtHistory((prev) => [
+          ...prev,
+          {
+            sender: 'ai',
+            text: data.answer || 'Here is the conceptual breakdown for your GATE preparation.',
+            time: formatTime(currentSec),
+          },
+        ]);
+      } else {
+        setDoubtHistory((prev) => [
+          ...prev,
+          {
+            sender: 'ai',
+            text: 'I could not connect to Gemini AI right now. Please ensure your Google Gemini API Key is configured in the AI Studio environment or try again.',
+            time: formatTime(currentSec),
+          },
+        ]);
+      }
+    } catch (err) {
+      setDoubtHistory((prev) => [
+        ...prev,
+        {
+          sender: 'ai',
+          text: 'Unable to reach the Gemini server. Please check your internet connection and API key.',
+          time: formatTime(currentSec),
+        },
+      ]);
+    } finally {
+      setIsAskingAi(false);
+    }
+  };
+
+  const handleAiSummarize = async () => {
+    if (isSummarizing) return;
+    setIsSummarizing(true);
+    setRightPanelTab('ai');
+
+    try {
+      const res = await fetch('/api/gemini/summarize-notes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          lectureTitle: lecture.title,
+          subject: lecture.subject,
+          module: lecture.module,
+          existingNotes: lecture.notes.map((n) => `[${n.timestamp}] ${n.text}`).join('\n'),
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setDoubtHistory((prev) => [
+          ...prev,
+          {
+            sender: 'ai',
+            text: `### 🎯 High-Yield Formula & Concept Sheet\n\n${data.summary}`,
+            time: formatTime(currentSec),
+          },
+        ]);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsSummarizing(false);
+    }
+  };
 
   // Timer loop for simulated playback
   useEffect(() => {
@@ -56,17 +174,6 @@ export const LectureDetailView: React.FC<LectureDetailViewProps> = ({
     }
     return () => clearInterval(interval);
   }, [isPlaying, totalSec]);
-
-  // Format seconds to mm:ss or hh:mm:ss
-  const formatTime = (secs: number) => {
-    const hrs = Math.floor(secs / 3600);
-    const mins = Math.floor((secs % 3600) / 60);
-    const s = Math.floor(secs % 60);
-    if (hrs > 0) {
-      return `${hrs}:${mins < 10 ? '0' : ''}${mins}:${s < 10 ? '0' : ''}${s}`;
-    }
-    return `${mins}:${s < 10 ? '0' : ''}${s}`;
-  };
 
   const handleTogglePlay = () => {
     setIsPlaying(!isPlaying);
@@ -354,87 +461,246 @@ export const LectureDetailView: React.FC<LectureDetailViewProps> = ({
           </div>
         </div>
 
-        {/* Right Column: Synchronized Notes */}
-        <div className="w-full lg:w-[400px] flex flex-col bg-[#141416] border border-[#27272A] rounded-xl shadow-xs overflow-hidden shrink-0">
-          {/* Header */}
-          <div className="p-4 border-b border-[#27272A] bg-[#18181B] flex justify-between items-center">
-            <h3 className="text-[16px] font-bold text-[#FAFAFA] flex items-center gap-2">
-              <span className="material-symbols-outlined text-[#60A5FA] text-[20px]">edit_note</span>
-              <span>Lecture Notes</span>
-            </h3>
-            <button
-              onClick={handleExportNotes}
-              className="text-[#A1A1AA] hover:text-[#FAFAFA] p-1.5 rounded-lg hover:bg-[#27272A] transition-colors"
-              title="Download Notes (.txt)"
-            >
-              <Download className="w-4 h-4" />
-            </button>
-          </div>
+        {/* Right Column: Synchronized Notes & Gemini AI Doubt Tutor */}
+        <div className="w-full lg:w-[420px] flex flex-col bg-[#141416] border border-[#27272A] rounded-xl shadow-xs overflow-hidden shrink-0">
+          {/* Tabs Header */}
+          <div className="border-b border-[#27272A] bg-[#18181B] flex items-center justify-between px-2 pt-2">
+            <div className="flex gap-1">
+              <button
+                onClick={() => setRightPanelTab('notes')}
+                className={`px-3.5 py-2 text-[13px] font-bold rounded-t-lg transition-colors flex items-center gap-1.5 ${
+                  rightPanelTab === 'notes'
+                    ? 'bg-[#141416] text-[#60A5FA] border-t-2 border-x border-[#27272A] border-t-[#3B82F6]'
+                    : 'text-[#A1A1AA] hover:text-[#FAFAFA] hover:bg-[#27272A]/50'
+                }`}
+              >
+                <span className="material-symbols-outlined text-[17px]">edit_note</span>
+                <span>Notes ({lecture.notes.length})</span>
+              </button>
 
-          {/* Notes Timeline Area */}
-          <div className="p-4 overflow-y-auto space-y-4 max-h-[380px] bg-[#121214]/50">
-            {lecture.notes.map((note) => {
-              const isHighlighted = activeHighlightNoteId === note.id;
-              return (
-                <div key={note.id} className="group relative pl-16">
-                  {/* Clickable timestamp badge */}
-                  <div
-                    onClick={() => handleJumpToTimestamp(note)}
-                    className="absolute left-0 top-0 cursor-pointer"
-                    title={`Jump to ${note.timestamp}`}
-                  >
-                    <span className="px-2.5 py-1 bg-[#27272A] text-[#93C5FD] hover:bg-[#2563EB] hover:text-white rounded text-[11px] font-bold tracking-wider shadow-xs border border-[#3F3F46] transition-colors inline-block">
-                      {note.timestamp}
-                    </span>
-                  </div>
+              <button
+                onClick={() => setRightPanelTab('ai')}
+                className={`px-3.5 py-2 text-[13px] font-bold rounded-t-lg transition-colors flex items-center gap-1.5 relative ${
+                  rightPanelTab === 'ai'
+                    ? 'bg-[#141416] text-[#60A5FA] border-t-2 border-x border-[#27272A] border-t-[#3B82F6]'
+                    : 'text-[#A1A1AA] hover:text-[#FAFAFA] hover:bg-[#27272A]/50'
+                }`}
+              >
+                <Sparkles className="w-3.5 h-3.5 text-[#60A5FA]" />
+                <span>Gemini AI Tutor</span>
+                <span className="w-2 h-2 rounded-full bg-[#10B981] animate-pulse" />
+              </button>
+            </div>
 
-                  {/* Note text container */}
-                  <div
-                    className={`border-l-2 pl-3 py-0.5 transition-all ${
-                      isHighlighted
-                        ? 'border-[#3B82F6] bg-[#2563EB]/20 rounded-r p-2'
-                        : 'border-[#27272A] group-hover:border-[#3B82F6]'
-                    }`}
-                  >
-                    <p className="text-[13px] text-[#FAFAFA] leading-relaxed">{note.text}</p>
-                  </div>
-                </div>
-              );
-            })}
-
-            {lecture.notes.length === 0 && (
-              <p className="text-[13px] text-[#71717A] text-center py-6">
-                No notes added yet. Type below to record your first timestamped note!
-              </p>
+            {rightPanelTab === 'notes' ? (
+              <div className="flex items-center gap-1 pb-1">
+                <button
+                  onClick={handleAiSummarize}
+                  disabled={isSummarizing}
+                  className="text-[11px] font-semibold text-[#60A5FA] hover:text-[#93C5FD] px-2 py-1 rounded hover:bg-[#2563EB]/15 flex items-center gap-1 transition-colors"
+                  title="Generate AI Formula Sheet"
+                >
+                  <Sparkles className="w-3 h-3" />
+                  <span>{isSummarizing ? 'Analyzing...' : 'AI Summary'}</span>
+                </button>
+                <button
+                  onClick={handleExportNotes}
+                  className="text-[#A1A1AA] hover:text-[#FAFAFA] p-1.5 rounded-lg hover:bg-[#27272A] transition-colors"
+                  title="Download Notes (.txt)"
+                >
+                  <Download className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => handleAiSummarize()}
+                disabled={isSummarizing}
+                className="text-[11px] font-semibold text-[#60A5FA] hover:text-[#93C5FD] px-2 py-1 mb-1 rounded hover:bg-[#2563EB]/15 flex items-center gap-1 transition-colors"
+              >
+                <Sparkles className="w-3 h-3" />
+                <span>{isSummarizing ? 'Generating...' : 'Formula Sheet'}</span>
+              </button>
             )}
           </div>
 
-          {/* Add Note Input Area */}
-          <div className="p-4 border-t border-[#27272A] bg-[#141416]">
-            <form onSubmit={handleAddNote} className="relative">
-              <textarea
-                value={newNoteText}
-                onChange={(e) => setNewNoteText(e.target.value)}
-                placeholder="Add a note at the current timestamp..."
-                rows={3}
-                className="w-full bg-[#18181B] border border-[#27272A] rounded-lg p-3 pr-12 text-[13px] text-[#FAFAFA] placeholder:text-[#71717A] focus:border-[#3B82F6] focus:bg-[#121214] focus:ring-1 focus:ring-[#3B82F6] outline-none transition-all resize-none"
-              />
-              <button
-                type="submit"
-                disabled={!newNoteText.trim()}
-                className="absolute bottom-3 right-3 w-8 h-8 bg-[#2563EB] text-white rounded-full flex items-center justify-center hover:bg-[#1D4ED8] disabled:opacity-40 disabled:hover:bg-[#2563EB] transition-all shadow-xs"
-                title="Save note"
-              >
-                <Send className="w-4 h-4 ml-0.5" />
-              </button>
-            </form>
+          {/* TAB 1: NOTES */}
+          {rightPanelTab === 'notes' && (
+            <>
+              {/* Notes Timeline Area */}
+              <div className="p-4 overflow-y-auto space-y-4 max-h-[380px] min-h-[280px] bg-[#121214]/50">
+                {lecture.notes.map((note) => {
+                  const isHighlighted = activeHighlightNoteId === note.id;
+                  return (
+                    <div key={note.id} className="group relative pl-16">
+                      {/* Clickable timestamp badge */}
+                      <div
+                        onClick={() => handleJumpToTimestamp(note)}
+                        className="absolute left-0 top-0 cursor-pointer"
+                        title={`Jump to ${note.timestamp}`}
+                      >
+                        <span className="px-2.5 py-1 bg-[#27272A] text-[#93C5FD] hover:bg-[#2563EB] hover:text-white rounded text-[11px] font-bold tracking-wider shadow-xs border border-[#3F3F46] transition-colors inline-block">
+                          {note.timestamp}
+                        </span>
+                      </div>
 
-            <div className="mt-2 text-right">
-              <span className="text-[11px] font-semibold text-[#71717A]">
-                Will attach to <span className="text-[#60A5FA] font-bold">{formatTime(currentSec)}</span>
-              </span>
+                      {/* Note text container */}
+                      <div
+                        className={`border-l-2 pl-3 py-0.5 transition-all ${
+                          isHighlighted
+                            ? 'border-[#3B82F6] bg-[#2563EB]/20 rounded-r p-2'
+                            : 'border-[#27272A] group-hover:border-[#3B82F6]'
+                        }`}
+                      >
+                        <p className="text-[13px] text-[#FAFAFA] leading-relaxed">{note.text}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {lecture.notes.length === 0 && (
+                  <div className="text-center py-8 space-y-2">
+                    <p className="text-[13px] text-[#71717A]">
+                      No notes recorded yet.
+                    </p>
+                    <button
+                      onClick={handleAiSummarize}
+                      className="px-3 py-1.5 bg-[#2563EB]/15 text-[#60A5FA] border border-[#2563EB]/30 rounded-lg text-[12px] font-semibold hover:bg-[#2563EB]/25 transition-colors inline-flex items-center gap-1.5"
+                    >
+                      <Sparkles className="w-3.5 h-3.5" />
+                      <span>Auto-Generate Notes with Gemini</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Add Note Input Area */}
+              <div className="p-4 border-t border-[#27272A] bg-[#141416]">
+                <form onSubmit={handleAddNote} className="relative">
+                  <textarea
+                    value={newNoteText}
+                    onChange={(e) => setNewNoteText(e.target.value)}
+                    placeholder="Add a note at current video timestamp..."
+                    rows={3}
+                    className="w-full bg-[#18181B] border border-[#27272A] rounded-lg p-3 pr-12 text-[13px] text-[#FAFAFA] placeholder:text-[#71717A] focus:border-[#3B82F6] focus:bg-[#121214] focus:ring-1 focus:ring-[#3B82F6] outline-none transition-all resize-none"
+                  />
+                  <button
+                    type="submit"
+                    disabled={!newNoteText.trim()}
+                    className="absolute bottom-3 right-3 w-8 h-8 bg-[#2563EB] text-white rounded-full flex items-center justify-center hover:bg-[#1D4ED8] disabled:opacity-40 disabled:hover:bg-[#2563EB] transition-all shadow-xs"
+                    title="Save note"
+                  >
+                    <Send className="w-4 h-4 ml-0.5" />
+                  </button>
+                </form>
+
+                <div className="mt-2 text-right">
+                  <span className="text-[11px] font-semibold text-[#71717A]">
+                    Will attach to <span className="text-[#60A5FA] font-bold">{formatTime(currentSec)}</span>
+                  </span>
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* TAB 2: GEMINI AI DOUBT TUTOR */}
+          {rightPanelTab === 'ai' && (
+            <div className="flex flex-col flex-1">
+              {/* Quick AI Prompt Chips */}
+              <div className="px-3 py-2 border-b border-[#27272A] bg-[#18181B]/60 flex items-center gap-1.5 overflow-x-auto text-[11px]">
+                <button
+                  onClick={() => handleAskDoubt(undefined, `Explain the key formula and intuition taught around ${formatTime(currentSec)} for ${lecture.title}.`)}
+                  className="px-2.5 py-1 bg-[#27272A] hover:bg-[#3F3F46] text-[#FAFAFA] rounded-md font-medium whitespace-nowrap transition-colors"
+                >
+                  💡 Explain Concept at {formatTime(currentSec)}
+                </button>
+                <button
+                  onClick={() => handleAskDoubt(undefined, `What are the most common GATE traps or tricky edge-cases in ${lecture.subject} - ${lecture.module}?`)}
+                  className="px-2.5 py-1 bg-[#27272A] hover:bg-[#3F3F46] text-[#FAFAFA] rounded-md font-medium whitespace-nowrap transition-colors"
+                >
+                  ⚠️ Common GATE Traps
+                </button>
+                <button
+                  onClick={() => handleAskDoubt(undefined, `Give me a fast 2-minute revision mnemonic or shortcut for ${lecture.title}.`)}
+                  className="px-2.5 py-1 bg-[#27272A] hover:bg-[#3F3F46] text-[#FAFAFA] rounded-md font-medium whitespace-nowrap transition-colors"
+                >
+                  ⚡ Revision Shortcut
+                </button>
+              </div>
+
+              {/* Chat Thread */}
+              <div className="p-4 overflow-y-auto space-y-3.5 max-h-[340px] min-h-[260px] bg-[#121214]/60">
+                {doubtHistory.map((item, idx) => (
+                  <div
+                    key={idx}
+                    className={`flex flex-col ${item.sender === 'user' ? 'items-end' : 'items-start'}`}
+                  >
+                    <div
+                      className={`max-w-[90%] p-3.5 rounded-xl text-[13px] leading-relaxed ${
+                        item.sender === 'user'
+                          ? 'bg-[#2563EB] text-white rounded-br-xs'
+                          : 'bg-[#18181B] border border-[#27272A] text-[#FAFAFA] rounded-bl-xs'
+                      }`}
+                    >
+                      <div className="whitespace-pre-line">{item.text}</div>
+
+                      {item.sender === 'ai' && (
+                        <div className="mt-2.5 pt-2 border-t border-[#27272A] flex items-center justify-between text-[11px] text-[#A1A1AA]">
+                          <span>Gemini 3.7 Flash</span>
+                          <button
+                            onClick={() => {
+                              const newNote: LectureNote = {
+                                id: `note-${Date.now()}`,
+                                timestamp: item.time || formatTime(currentSec),
+                                timestampSec: currentSec,
+                                text: `[AI Insight] ${item.text.slice(0, 180)}...`,
+                              };
+                              onUpdateLecture({
+                                ...lecture,
+                                notes: [...lecture.notes, newNote],
+                              });
+                              alert('AI Insight pinned to your timestamped notes!');
+                            }}
+                            className="text-[#60A5FA] hover:underline font-semibold"
+                          >
+                            + Pin to Notes
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                    <span className="text-[10px] text-[#71717A] mt-1 px-1">{item.time}</span>
+                  </div>
+                ))}
+
+                {isAskingAi && (
+                  <div className="flex items-center gap-2 p-3 bg-[#18181B] border border-[#27272A] rounded-xl text-[13px] text-[#60A5FA] animate-pulse">
+                    <Sparkles className="w-4 h-4" />
+                    <span>Gemini AI is analyzing GATE concept &amp; formulas...</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Chat Input */}
+              <div className="p-3 border-t border-[#27272A] bg-[#141416]">
+                <form onSubmit={handleAskDoubt} className="flex gap-2">
+                  <input
+                    type="text"
+                    value={doubtQuestion}
+                    onChange={(e) => setDoubtQuestion(e.target.value)}
+                    placeholder="Ask any GATE doubt or formula question..."
+                    className="flex-1 bg-[#18181B] border border-[#27272A] rounded-lg px-3 py-2 text-[13px] text-[#FAFAFA] placeholder:text-[#71717A] focus:border-[#3B82F6] outline-none"
+                  />
+                  <button
+                    type="submit"
+                    disabled={!doubtQuestion.trim() || isAskingAi}
+                    className="px-4 py-2 bg-[#2563EB] text-white rounded-lg font-semibold text-[13px] hover:bg-[#1D4ED8] disabled:opacity-40 transition-colors flex items-center gap-1 shrink-0"
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>Ask</span>
+                  </button>
+                </form>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
 
