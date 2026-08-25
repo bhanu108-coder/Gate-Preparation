@@ -1,0 +1,6 @@
+{
+  "name": "GATE Mastery",
+  "description": "Comprehensive GATE Academic Workspace with curated lecture tracking, timestamped notes, and an interactive digitized PYQ bank.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

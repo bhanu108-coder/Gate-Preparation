@@ -1,0 +1,110 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --primary: #3B82F6;
+    --primary-container: #1E3A8A;
+    --primary-fixed: #2563EB;
+    --primary-fixed-dim: #1D4ED8;
+    --on-primary: #FFFFFF;
+    --on-primary-container: #DBEAFE;
+    --on-primary-fixed: #EFF6FF;
+    --on-primary-fixed-variant: #BFDBFE;
+
+    --secondary: #A1A1AA;
+    --secondary-container: #27272A;
+    --on-secondary-container: #E4E4E7;
+    --secondary-fixed: #3F3F46;
+    --secondary-fixed-dim: #52525B;
+    --on-secondary-fixed: #FAFAFA;
+
+    --tertiary: #10B981;
+    --tertiary-container: #064E3B;
+    --on-tertiary-container: #A7F3D0;
+    --tertiary-fixed: #059669;
+    --tertiary-fixed-dim: #047857;
+
+    --error: #EF4444;
+    --error-container: #450A0A;
+    --on-error-container: #FECACA;
+
+    --surface: #0A0A0A;
+    --surface-bright: #18181B;
+    --surface-dim: #09090B;
+    --surface-container-lowest: #0F0F11;
+    --surface-container-low: #141416;
+    --surface-container: #18181B;
+    --surface-container-high: #202024;
+    --surface-container-highest: #27272A;
+    --surface-variant: #27272A;
+
+    --on-surface: #FAFAFA;
+    --on-surface-variant: #A1A1AA;
+    --outline: #52525B;
+    --outline-variant: #27272A;
+    --background: #0A0A0A;
+    --on-background: #FAFAFA;
+  }
+
+  body {
+    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background-color: var(--background);
+    color: var(--on-background);
+    margin: 0;
+    padding: 0;
+  }
+}
+
+/* Material Symbols Outlined settings */
+.material-symbols-outlined {
+  font-family: 'Material Symbols Outlined';
+  font-weight: normal;
+  font-style: normal;
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-feature-settings: 'liga';
+  -webkit-font-smoothing: antialiased;
+  vertical-align: middle;
+}
+
+/* Glass & Card effects */
+.glass-card {
+  background: rgba(20, 20, 23, 0.85);
+  backdrop-filter: blur(16px);
+  border: 1px solid #27272A;
+}
+
+.video-gradient {
+  background: linear-gradient(135deg, #18181B 0%, #09090B 100%);
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #0A0A0A;
+}
+::-webkit-scrollbar-thumb {
+  background: #27272A;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #3F3F46;
+}
+
+/* Hide scrollbar utility */
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
