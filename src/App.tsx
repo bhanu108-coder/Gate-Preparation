@@ -5,6 +5,7 @@ import {
   initialPYQs,
   initialDigitizedUploads,
   initialSchedule,
+  initialSubjects,
 } from './data/initialData';
 import { Sidebar } from './components/Sidebar';
 import { TopNavbar } from './components/TopNavbar';
@@ -23,6 +24,7 @@ import { HelpModal } from './components/HelpModal';
 
 export default function App() {
   const [currentView, setCurrentView] = useState<NavView>('dashboard');
+  const [subjects, setSubjects] = useState<string[]>(initialSubjects);
   const [lectures, setLectures] = useState<Lecture[]>(initialLectures);
   const [pyqs, setPyqs] = useState<PYQQuestion[]>(initialPYQs);
   const [digitizedUploads, setDigitizedUploads] = useState<DigitizedUpload[]>(initialDigitizedUploads);
@@ -38,6 +40,15 @@ export default function App() {
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [globalSearchQuery, setGlobalSearchQuery] = useState('');
+
+  // Subject Handlers
+  const handleAddSubject = (subjectName: string) => {
+    const trimmed = subjectName.trim();
+    if (!trimmed) return;
+    if (!subjects.some((s) => s.toLowerCase() === trimmed.toLowerCase())) {
+      setSubjects((prev) => [...prev, trimmed]);
+    }
+  };
 
   // Navigation handler
   const handleNavigate = (view: NavView) => {
@@ -189,10 +200,12 @@ export default function App() {
         {currentView === 'lectures' && (
           <MyLecturesView
             lectures={lectures}
+            subjects={subjects}
             onSelectLecture={handleSelectLecture}
             onOpenAddLectureModal={() => setIsAddLectureOpen(true)}
             onAddLectureFromUrl={handleAddLectureFromUrl}
             onRemoveLecture={handleRemoveLecture}
+            onAddSubject={handleAddSubject}
           />
         )}
 
@@ -213,10 +226,12 @@ export default function App() {
         {currentView === 'pyq-bank' && (
           <PYQBankView
             pyqs={pyqs}
+            subjects={subjects}
             digitizedUploads={digitizedUploads}
             onSelectPYQ={handleSelectPYQ}
             onOpenUploadModal={() => setIsUploadPDFOpen(true)}
             onUpdatePYQ={handleUpdatePYQ}
+            onAddSubject={handleAddSubject}
           />
         )}
 
@@ -241,7 +256,9 @@ export default function App() {
       <AddLectureModal
         isOpen={isAddLectureOpen}
         onClose={() => setIsAddLectureOpen(false)}
+        subjects={subjects}
         onAddLecture={handleAddLecture}
+        onAddSubject={handleAddSubject}
       />
 
       <UploadPDFModal

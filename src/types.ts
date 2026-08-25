@@ -1,6 +1,14 @@
 export type NavView = 'dashboard' | 'lectures' | 'lecture-detail' | 'pyq-bank' | 'schedule' | 'settings';
 
-export type SubjectFilter = 'All Subjects' | 'Digital Logic' | 'Algorithms' | 'Data Structures' | 'OS' | 'Computer Networks' | 'Databases' | 'Discrete Math';
+export type SubjectFilter = string;
+
+export interface SubjectInfo {
+  id: string;
+  name: string;
+  category?: string;
+  color?: string;
+  icon?: string;
+}
 
 export type PYQDifficulty = 'Easy' | 'Medium' | 'Hard';
 export type PYQStatus = 'Solved' | 'Unsolved' | 'Flagged' | 'Bookmarked' | 'Pending';

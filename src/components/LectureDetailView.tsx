@@ -1,20 +1,19 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import { Lecture, LectureNote, ConceptItem } from '../types';
 import {
   ArrowLeft,
-  Play,
-  Pause,
   CheckCircle,
   ArrowRight,
   Download,
   Send,
   Sparkles,
-  Volume2,
-  Maximize,
-  RotateCcw,
   Trash2,
   AlertTriangle,
   X,
+  BookOpen,
+  Clock,
+  CheckCircle2,
+  FileText,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
@@ -33,20 +32,6 @@ export const LectureDetailView: React.FC<LectureDetailViewProps> = ({
   onUpdateLecture,
   onRemoveLecture,
 }) => {
-  // Format seconds to mm:ss or hh:mm:ss
-  const formatTime = (secs: number) => {
-    const hrs = Math.floor(secs / 3600);
-    const mins = Math.floor((secs % 3600) / 60);
-    const s = Math.floor(secs % 60);
-    if (hrs > 0) {
-      return `${hrs}:${mins < 10 ? '0' : ''}${mins}:${s < 10 ? '0' : ''}${s}`;
-    }
-    return `${mins}:${s < 10 ? '0' : ''}${s}`;
-  };
-
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [currentSec, setCurrentSec] = useState(lecture.currentTimeSeconds || 2895); // 48:15
-  const [totalSec] = useState(lecture.durationSeconds || 5055); // 1:24:15
   const [newNoteText, setNewNoteText] = useState('');
   const [activeHighlightNoteId, setActiveHighlightNoteId] = useState<string | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -55,7 +40,7 @@ export const LectureDetailView: React.FC<LectureDetailViewProps> = ({
   const [doubtHistory, setDoubtHistory] = useState<Array<{ sender: 'user' | 'ai'; text: string; time: string }>>([
     {
       sender: 'ai',
-      text: `Hello! I'm your **GATE Gemini AI Academic Tutor**. Ask me any doubt about **${lecture.title}**, seek clarification on formulas, or click **Formula Sheet** above!`,
+      text: `Hello! I'm your **GATE Gemini AI Academic Tutor**. Ask me any doubt about **${lecture.title}**, clarify core formulas, or click **Formula Sheet** above!`,
       time: 'Just now',
     },
   ]);
@@ -70,7 +55,7 @@ export const LectureDetailView: React.FC<LectureDetailViewProps> = ({
     const userEntry = {
       sender: 'user' as const,
       text: promptToSend,
-      time: formatTime(currentSec),
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     };
 
     setDoubtHistory((prev) => [...prev, userEntry]);
@@ -85,7 +70,7 @@ export const LectureDetailView: React.FC<LectureDetailViewProps> = ({
           prompt: promptToSend,
           context: `Subject: ${lecture.subject}, Module: ${lecture.module}`,
           lectureTitle: lecture.title,
-          timestamp: formatTime(currentSec),
+          timestamp: 'Topic Study Room',
         }),
       });
 
@@ -96,7 +81,7 @@ export const LectureDetailView: React.FC<LectureDetailViewProps> = ({
           {
             sender: 'ai',
             text: data.answer || 'Here is the conceptual breakdown for your GATE preparation.',
-            time: formatTime(currentSec),
+            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
           },
         ]);
       } else {
@@ -105,7 +90,7 @@ export const LectureDetailView: React.FC<LectureDetailViewProps> = ({
           {
             sender: 'ai',
             text: 'I could not connect to Gemini AI right now. Please ensure your Google Gemini API Key is configured in the AI Studio environment or try again.',
-            time: formatTime(currentSec),
+            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
           },
         ]);
       }
@@ -115,7 +100,7 @@ export const LectureDetailView: React.FC<LectureDetailViewProps> = ({
         {
           sender: 'ai',
           text: 'Unable to reach the Gemini server. Please check your internet connection and API key.',
-          time: formatTime(currentSec),
+          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         },
       ]);
     } finally {
@@ -147,7 +132,7 @@ export const LectureDetailView: React.FC<LectureDetailViewProps> = ({
           {
             sender: 'ai',
             text: `### 🎯 High-Yield Formula & Concept Sheet\n\n${data.summary}`,
-            time: formatTime(currentSec),
+            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
           },
         ]);
       }
@@ -156,38 +141,6 @@ export const LectureDetailView: React.FC<LectureDetailViewProps> = ({
     } finally {
       setIsSummarizing(false);
     }
-  };
-
-  // Timer loop for simulated playback
-  useEffect(() => {
-    let interval: any;
-    if (isPlaying) {
-      interval = setInterval(() => {
-        setCurrentSec((prev) => {
-          if (prev >= totalSec) {
-            setIsPlaying(false);
-            return totalSec;
-          }
-          return prev + 1;
-        });
-      }, 1000);
-    }
-    return () => clearInterval(interval);
-  }, [isPlaying, totalSec]);
-
-  const handleTogglePlay = () => {
-    setIsPlaying(!isPlaying);
-  };
-
-  const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = Number(e.target.value);
-    setCurrentSec(val);
-  };
-
-  const handleJumpToTimestamp = (note: LectureNote) => {
-    setCurrentSec(note.timestampSec);
-    setActiveHighlightNoteId(note.id);
-    setTimeout(() => setActiveHighlightNoteId(null), 2500);
   };
 
   const handleToggleConcept = (conceptId: string) => {
@@ -233,14 +186,15 @@ export const LectureDetailView: React.FC<LectureDetailViewProps> = ({
     if (e) e.preventDefault();
     if (!newNoteText.trim()) return;
 
+    const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     const newNote: LectureNote = {
       id: `n-${Date.now()}`,
-      timestamp: formatTime(currentSec),
-      timestampSec: currentSec,
+      timestamp: timeStr,
+      timestampSec: lecture.notes.length * 60,
       text: newNoteText.trim(),
     };
 
-    const updatedNotes = [...lecture.notes, newNote].sort((a, b) => a.timestampSec - b.timestampSec);
+    const updatedNotes = [...lecture.notes, newNote];
 
     onUpdateLecture({
       ...lecture,
@@ -251,7 +205,7 @@ export const LectureDetailView: React.FC<LectureDetailViewProps> = ({
   };
 
   const handleExportNotes = () => {
-    const notesText = `${lecture.title} - Lecture Notes\n\n` +
+    const notesText = `${lecture.title} - Study Notes\n\n` +
       lecture.notes.map((n) => `[${n.timestamp}] ${n.text}`).join('\n\n');
 
     const blob = new Blob([notesText], { type: 'text/plain;charset=utf-8' });
@@ -271,10 +225,12 @@ export const LectureDetailView: React.FC<LectureDetailViewProps> = ({
     }
   };
 
+  const completedConceptsCount = lecture.concepts.filter((c) => c.completed).length;
+
   return (
     <div id="lecture-detail-view" className="flex flex-col gap-6 w-full max-w-[1440px] mx-auto pb-12 animate-fadeIn">
-      {/* Back Link */}
-      <div>
+      {/* Back Link & Breadcrumb */}
+      <div className="flex items-center justify-between">
         <button
           id="btn-back-to-module"
           onClick={onBack}
@@ -283,156 +239,144 @@ export const LectureDetailView: React.FC<LectureDetailViewProps> = ({
           <ArrowLeft className="w-4 h-4 mr-1.5 transform group-hover:-translate-x-0.5 transition-transform" />
           <span>Back to Module: {lecture.subject}</span>
         </button>
+
+        <div className="flex items-center gap-2">
+          <span className="text-[12px] font-semibold text-[#A1A1AA] bg-[#18181B] px-3 py-1 rounded-full border border-[#27272A]">
+            {lecture.subject}
+          </span>
+          <span className="text-[12px] font-semibold text-[#60A5FA] bg-[#2563EB]/15 px-3 py-1 rounded-full border border-[#2563EB]/30">
+            {lecture.module}
+          </span>
+        </div>
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-6 items-start">
-        {/* Left Column: Video Player & Main Info */}
-        <div className="flex-1 flex flex-col gap-6 w-full">
-          {/* Video Player Container */}
-          <div className="relative w-full aspect-video bg-gradient-to-br from-[#1F1F23] to-[#0A0A0A] rounded-xl overflow-hidden border border-[#27272A] flex flex-col justify-between shadow-sm group">
-            {/* Top info badge */}
-            <div className="p-4 flex justify-between items-center z-10">
-              <span className="text-white/80 text-[12px] font-medium bg-black/50 px-2.5 py-1 rounded backdrop-blur-xs border border-white/10">
-                {lecture.subject} • {lecture.module}
-              </span>
-              <div className="flex items-center gap-2">
-                <span className="px-2 py-0.5 bg-black/60 text-white rounded text-[11px] font-bold tracking-wider backdrop-blur-xs border border-white/20">
-                  HD 1080p
-                </span>
-              </div>
-            </div>
-
-            {/* Big center play/pause button */}
-            <div className="self-center flex items-center justify-center">
-              <button
-                id="btn-play-pause-center"
-                onClick={handleTogglePlay}
-                className="w-16 h-16 bg-[#2563EB] rounded-full flex items-center justify-center shadow-xl transform group-hover:scale-105 hover:bg-[#1D4ED8] transition-all"
-                aria-label={isPlaying ? 'Pause video' : 'Play video'}
-              >
-                {isPlaying ? (
-                  <Pause className="w-8 h-8 text-white fill-white" />
-                ) : (
-                  <Play className="w-8 h-8 text-white fill-white ml-1" />
-                )}
-              </button>
-            </div>
-
-            {/* Bottom Overlay & Scrubbable Progress Bar */}
-            <div className="p-4 bg-gradient-to-t from-black/90 via-black/50 to-transparent flex flex-col gap-2 z-10">
-              {/* Scrub slider */}
-              <div className="flex items-center gap-3">
-                <input
-                  type="range"
-                  min={0}
-                  max={totalSec}
-                  value={currentSec}
-                  onChange={handleSeek}
-                  className="w-full h-1.5 bg-white/20 rounded-lg appearance-none cursor-pointer accent-[#3B82F6]"
-                />
-              </div>
-
-              <div className="flex justify-between items-center text-white text-[12px] font-semibold">
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={handleTogglePlay}
-                    className="hover:text-[#93C5FD] transition-colors p-1"
-                  >
-                    {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-                  </button>
-                  <span>
-                    {formatTime(currentSec)} / {lecture.duration}
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={() => setCurrentSec(0)}
-                    title="Restart"
-                    className="hover:text-[#93C5FD] transition-colors p-1"
-                  >
-                    <RotateCcw className="w-4 h-4" />
-                  </button>
-                  <button title="Volume" className="hover:text-[#93C5FD] transition-colors p-1">
-                    <Volume2 className="w-4 h-4" />
-                  </button>
-                  <button title="Fullscreen" className="hover:text-[#93C5FD] transition-colors p-1">
-                    <Maximize className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
+      {/* Main Study Room Header & Actions */}
+      <div className="bg-[#141416] border border-[#27272A] rounded-2xl p-6 md:p-8 shadow-xs flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+        <div className="space-y-2 max-w-3xl">
+          <div className="flex items-center gap-3">
+            <span className="p-2 rounded-xl bg-[#2563EB]/15 text-[#60A5FA] border border-[#2563EB]/30">
+              <BookOpen className="w-5 h-5" />
+            </span>
+            <div className="flex items-center gap-2 text-[12px] font-bold text-[#A1A1AA] uppercase tracking-wider">
+              <span>Estimated Study Time: {lecture.duration}</span>
+              <span>•</span>
+              <span className="text-[#34D399]">{lecture.progressPercent}% Mastered</span>
             </div>
           </div>
 
-          {/* Lecture Header & Actions */}
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 p-6 bg-[#141416] border border-[#27272A] rounded-xl shadow-xs">
-            <div>
-              <h2 className="text-[24px] md:text-[26px] font-bold text-[#FAFAFA] tracking-tight leading-snug">
-                {lecture.title}
-              </h2>
-              <p className="text-[14px] text-[#A1A1AA] mt-1 font-normal">{lecture.module}</p>
+          <h2 className="text-[26px] md:text-[32px] font-bold text-[#FAFAFA] tracking-tight leading-snug">
+            {lecture.title}
+          </h2>
+          <p className="text-[14px] text-[#A1A1AA] font-normal leading-relaxed">
+            {lecture.module} — Master core theorems, mathematical foundations, and high-frequency GATE examination problem patterns.
+          </p>
+        </div>
+
+        {/* Action Controls */}
+        <div className="flex flex-wrap gap-2.5 w-full md:w-auto items-center shrink-0">
+          <button
+            id="btn-mark-completed"
+            onClick={handleToggleCompleted}
+            className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-[13px] tracking-wide transition-all border ${
+              lecture.isCompleted
+                ? 'bg-[#10B981] text-white border-[#10B981]'
+                : 'border-[#3B82F6] text-[#60A5FA] hover:bg-[#2563EB]/15'
+            }`}
+          >
+            <CheckCircle className="w-4 h-4" />
+            <span>{lecture.isCompleted ? 'Completed' : 'Mark as Completed'}</span>
+          </button>
+
+          <button
+            id="btn-next-lecture"
+            onClick={() => {
+              if (onNextLecture) onNextLecture();
+              else alert('Proceeding to Next Module...');
+            }}
+            className="flex-1 md:flex-none flex items-center justify-center gap-2 px-5 py-2.5 bg-[#2563EB] text-white rounded-xl font-semibold text-[13px] tracking-wide hover:bg-[#1D4ED8] transition-colors shadow-xs"
+          >
+            <span>Next Lecture</span>
+            <ArrowRight className="w-4 h-4" />
+          </button>
+
+          {onRemoveLecture && (
+            <button
+              id="btn-remove-lecture-detail"
+              onClick={() => setIsDeleteModalOpen(true)}
+              className="flex items-center justify-center gap-1.5 px-3.5 py-2.5 text-[#71717A] hover:text-[#EF4444] hover:bg-[#EF4444]/10 border border-[#27272A] hover:border-[#EF4444]/30 rounded-xl font-semibold text-[13px] tracking-wide transition-colors"
+              title="Remove lecture from workspace"
+            >
+              <Trash2 className="w-4 h-4" />
+              <span className="hidden sm:inline">Remove</span>
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Main Two-Column Layout: Concepts & Notes/AI Tutor */}
+      <div className="flex flex-col lg:flex-row gap-6 items-start">
+        {/* Left Column: Concept Checklist Bento & Study Progress */}
+        <div className="flex-1 flex flex-col gap-6 w-full">
+          {/* Quick Metrics Bar */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="bg-[#141416] border border-[#27272A] rounded-xl p-4 flex items-center gap-3.5">
+              <div className="p-2.5 rounded-lg bg-[#2563EB]/15 text-[#60A5FA]">
+                <CheckCircle2 className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-[11px] font-bold text-[#A1A1AA] uppercase tracking-wider">Concepts Done</p>
+                <p className="text-[18px] font-bold text-[#FAFAFA]">
+                  {completedConceptsCount} / {lecture.concepts.length}
+                </p>
+              </div>
             </div>
 
-            <div className="flex flex-wrap gap-2.5 w-full md:w-auto items-center">
-              <button
-                id="btn-mark-completed"
-                onClick={handleToggleCompleted}
-                className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg font-semibold text-[13px] tracking-wide transition-all border ${
-                  lecture.isCompleted
-                    ? 'bg-[#10B981] text-white border-[#10B981]'
-                    : 'border-[#3B82F6] text-[#60A5FA] hover:bg-[#2563EB]/15'
-                }`}
-              >
-                <CheckCircle className="w-4 h-4" />
-                <span>{lecture.isCompleted ? 'Completed' : 'Mark as Completed'}</span>
-              </button>
+            <div className="bg-[#141416] border border-[#27272A] rounded-xl p-4 flex items-center gap-3.5">
+              <div className="p-2.5 rounded-lg bg-[#10B981]/15 text-[#34D399]">
+                <Clock className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-[11px] font-bold text-[#A1A1AA] uppercase tracking-wider">Duration</p>
+                <p className="text-[18px] font-bold text-[#FAFAFA]">{lecture.duration}</p>
+              </div>
+            </div>
 
-              <button
-                id="btn-next-lecture"
-                onClick={() => {
-                  if (onNextLecture) onNextLecture();
-                  else alert('Proceeding to Next Module...');
-                }}
-                className="flex-1 md:flex-none flex items-center justify-center gap-2 px-5 py-2.5 bg-[#2563EB] text-white rounded-lg font-semibold text-[13px] tracking-wide hover:bg-[#1D4ED8] transition-colors shadow-xs"
-              >
-                <span>Next Lecture</span>
-                <ArrowRight className="w-4 h-4" />
-              </button>
-
-              {onRemoveLecture && (
-                <button
-                  id="btn-remove-lecture-detail"
-                  onClick={() => setIsDeleteModalOpen(true)}
-                  className="flex items-center justify-center gap-1.5 px-3.5 py-2.5 text-[#71717A] hover:text-[#EF4444] hover:bg-[#EF4444]/10 border border-[#27272A] hover:border-[#EF4444]/30 rounded-lg font-semibold text-[13px] tracking-wide transition-colors"
-                  title="Remove lecture from workspace"
-                >
-                  <Trash2 className="w-4 h-4" />
-                  <span className="hidden sm:inline">Remove</span>
-                </button>
-              )}
+            <div className="bg-[#141416] border border-[#27272A] rounded-xl p-4 flex items-center gap-3.5">
+              <div className="p-2.5 rounded-lg bg-[#8B5CF6]/15 text-[#A78BFA]">
+                <FileText className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-[11px] font-bold text-[#A1A1AA] uppercase tracking-wider">Notes Saved</p>
+                <p className="text-[18px] font-bold text-[#FAFAFA]">{lecture.notes.length} Entries</p>
+              </div>
             </div>
           </div>
 
           {/* Concept Checklist Bento Box */}
-          <div className="bg-[#141416] border border-[#27272A] rounded-xl p-6 shadow-xs">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-[18px] font-semibold text-[#FAFAFA] flex items-center gap-2">
-                <span className="material-symbols-outlined text-[#60A5FA] text-[22px]">fact_check</span>
-                <span>Concepts Covered</span>
-              </h3>
-              <span className="text-[12px] font-bold text-[#A1A1AA] uppercase tracking-wider">
-                {lecture.concepts.filter((c) => c.completed).length} / {lecture.concepts.length} Completed
+          <div className="bg-[#141416] border border-[#27272A] rounded-xl p-6 shadow-xs space-y-4">
+            <div className="flex justify-between items-center pb-3 border-b border-[#27272A]">
+              <div>
+                <h3 className="text-[18px] font-semibold text-[#FAFAFA] flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[#60A5FA] text-[22px]">fact_check</span>
+                  <span>Concepts &amp; Theorems Covered</span>
+                </h3>
+                <p className="text-[12px] text-[#A1A1AA] mt-0.5">
+                  Check off concepts as you review them to track your mastery pace.
+                </p>
+              </div>
+              <span className="text-[12px] font-bold text-[#60A5FA] bg-[#2563EB]/15 px-3 py-1 rounded-full border border-[#2563EB]/30">
+                {completedConceptsCount} / {lecture.concepts.length} Completed
               </span>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
               {lecture.concepts.map((concept) => {
                 return (
                   <label
                     key={concept.id}
-                    className={`flex items-start gap-3 p-3.5 rounded-xl border transition-all cursor-pointer ${
+                    className={`flex items-start gap-3.5 p-4 rounded-xl border transition-all cursor-pointer ${
                       concept.completed
-                        ? 'bg-[#18181B] border-[#3B82F6]/40'
+                        ? 'bg-[#18181B] border-[#3B82F6]/50 shadow-xs'
                         : 'bg-[#121214] border-[#27272A] hover:border-[#3F3F46]'
                     }`}
                   >
@@ -444,13 +388,13 @@ export const LectureDetailView: React.FC<LectureDetailViewProps> = ({
                     />
                     <div>
                       <span
-                        className={`text-[13px] font-bold block ${
+                        className={`text-[14px] font-bold block ${
                           concept.completed ? 'text-[#60A5FA]' : 'text-[#FAFAFA]'
                         }`}
                       >
                         {concept.title}
                       </span>
-                      <span className="text-[12px] text-[#A1A1AA] mt-0.5 block leading-relaxed">
+                      <span className="text-[12px] text-[#A1A1AA] mt-1 block leading-relaxed">
                         {concept.description}
                       </span>
                     </div>
@@ -461,8 +405,8 @@ export const LectureDetailView: React.FC<LectureDetailViewProps> = ({
           </div>
         </div>
 
-        {/* Right Column: Synchronized Notes & Gemini AI Doubt Tutor */}
-        <div className="w-full lg:w-[420px] flex flex-col bg-[#141416] border border-[#27272A] rounded-xl shadow-xs overflow-hidden shrink-0">
+        {/* Right Column: Academic Notes & Gemini AI Doubt Tutor */}
+        <div className="w-full lg:w-[440px] flex flex-col bg-[#141416] border border-[#27272A] rounded-xl shadow-xs overflow-hidden shrink-0">
           {/* Tabs Header */}
           <div className="border-b border-[#27272A] bg-[#18181B] flex items-center justify-between px-2 pt-2">
             <div className="flex gap-1">
@@ -527,18 +471,14 @@ export const LectureDetailView: React.FC<LectureDetailViewProps> = ({
           {rightPanelTab === 'notes' && (
             <>
               {/* Notes Timeline Area */}
-              <div className="p-4 overflow-y-auto space-y-4 max-h-[380px] min-h-[280px] bg-[#121214]/50">
+              <div className="p-4 overflow-y-auto space-y-4 max-h-[420px] min-h-[300px] bg-[#121214]/50">
                 {lecture.notes.map((note) => {
                   const isHighlighted = activeHighlightNoteId === note.id;
                   return (
                     <div key={note.id} className="group relative pl-16">
-                      {/* Clickable timestamp badge */}
-                      <div
-                        onClick={() => handleJumpToTimestamp(note)}
-                        className="absolute left-0 top-0 cursor-pointer"
-                        title={`Jump to ${note.timestamp}`}
-                      >
-                        <span className="px-2.5 py-1 bg-[#27272A] text-[#93C5FD] hover:bg-[#2563EB] hover:text-white rounded text-[11px] font-bold tracking-wider shadow-xs border border-[#3F3F46] transition-colors inline-block">
+                      {/* Timestamp badge */}
+                      <div className="absolute left-0 top-0">
+                        <span className="px-2 py-0.5 bg-[#27272A] text-[#93C5FD] rounded text-[11px] font-bold tracking-wider shadow-xs border border-[#3F3F46] inline-block">
                           {note.timestamp}
                         </span>
                       </div>
@@ -558,13 +498,13 @@ export const LectureDetailView: React.FC<LectureDetailViewProps> = ({
                 })}
 
                 {lecture.notes.length === 0 && (
-                  <div className="text-center py-8 space-y-2">
+                  <div className="text-center py-10 space-y-3">
                     <p className="text-[13px] text-[#71717A]">
                       No notes recorded yet.
                     </p>
                     <button
                       onClick={handleAiSummarize}
-                      className="px-3 py-1.5 bg-[#2563EB]/15 text-[#60A5FA] border border-[#2563EB]/30 rounded-lg text-[12px] font-semibold hover:bg-[#2563EB]/25 transition-colors inline-flex items-center gap-1.5"
+                      className="px-3.5 py-2 bg-[#2563EB]/15 text-[#60A5FA] border border-[#2563EB]/30 rounded-lg text-[12px] font-semibold hover:bg-[#2563EB]/25 transition-colors inline-flex items-center gap-1.5"
                     >
                       <Sparkles className="w-3.5 h-3.5" />
                       <span>Auto-Generate Notes with Gemini</span>
@@ -579,7 +519,7 @@ export const LectureDetailView: React.FC<LectureDetailViewProps> = ({
                   <textarea
                     value={newNoteText}
                     onChange={(e) => setNewNoteText(e.target.value)}
-                    placeholder="Add a note at current video timestamp..."
+                    placeholder="Record key theorem, formula, or shortcut note..."
                     rows={3}
                     className="w-full bg-[#18181B] border border-[#27272A] rounded-lg p-3 pr-12 text-[13px] text-[#FAFAFA] placeholder:text-[#71717A] focus:border-[#3B82F6] focus:bg-[#121214] focus:ring-1 focus:ring-[#3B82F6] outline-none transition-all resize-none"
                   />
@@ -592,12 +532,6 @@ export const LectureDetailView: React.FC<LectureDetailViewProps> = ({
                     <Send className="w-4 h-4 ml-0.5" />
                   </button>
                 </form>
-
-                <div className="mt-2 text-right">
-                  <span className="text-[11px] font-semibold text-[#71717A]">
-                    Will attach to <span className="text-[#60A5FA] font-bold">{formatTime(currentSec)}</span>
-                  </span>
-                </div>
               </div>
             </>
           )}
@@ -608,27 +542,27 @@ export const LectureDetailView: React.FC<LectureDetailViewProps> = ({
               {/* Quick AI Prompt Chips */}
               <div className="px-3 py-2 border-b border-[#27272A] bg-[#18181B]/60 flex items-center gap-1.5 overflow-x-auto text-[11px]">
                 <button
-                  onClick={() => handleAskDoubt(undefined, `Explain the key formula and intuition taught around ${formatTime(currentSec)} for ${lecture.title}.`)}
+                  onClick={() => handleAskDoubt(undefined, `Explain the core intuition and mathematical foundations of ${lecture.title}.`)}
                   className="px-2.5 py-1 bg-[#27272A] hover:bg-[#3F3F46] text-[#FAFAFA] rounded-md font-medium whitespace-nowrap transition-colors"
                 >
-                  💡 Explain Concept at {formatTime(currentSec)}
+                  💡 Core Intuition
                 </button>
                 <button
-                  onClick={() => handleAskDoubt(undefined, `What are the most common GATE traps or tricky edge-cases in ${lecture.subject} - ${lecture.module}?`)}
+                  onClick={() => handleAskDoubt(undefined, `What are the most common GATE traps and edge-cases in ${lecture.subject} - ${lecture.module}?`)}
                   className="px-2.5 py-1 bg-[#27272A] hover:bg-[#3F3F46] text-[#FAFAFA] rounded-md font-medium whitespace-nowrap transition-colors"
                 >
                   ⚠️ Common GATE Traps
                 </button>
                 <button
-                  onClick={() => handleAskDoubt(undefined, `Give me a fast 2-minute revision mnemonic or shortcut for ${lecture.title}.`)}
+                  onClick={() => handleAskDoubt(undefined, `Provide a concise formula list and time/space complexity summary for ${lecture.title}.`)}
                   className="px-2.5 py-1 bg-[#27272A] hover:bg-[#3F3F46] text-[#FAFAFA] rounded-md font-medium whitespace-nowrap transition-colors"
                 >
-                  ⚡ Revision Shortcut
+                  ⚡ Formula Summary
                 </button>
               </div>
 
               {/* Chat Thread */}
-              <div className="p-4 overflow-y-auto space-y-3.5 max-h-[340px] min-h-[260px] bg-[#121214]/60">
+              <div className="p-4 overflow-y-auto space-y-3.5 max-h-[380px] min-h-[280px] bg-[#121214]/60">
                 {doubtHistory.map((item, idx) => (
                   <div
                     key={idx}
@@ -650,15 +584,15 @@ export const LectureDetailView: React.FC<LectureDetailViewProps> = ({
                             onClick={() => {
                               const newNote: LectureNote = {
                                 id: `note-${Date.now()}`,
-                                timestamp: item.time || formatTime(currentSec),
-                                timestampSec: currentSec,
+                                timestamp: item.time,
+                                timestampSec: lecture.notes.length * 60,
                                 text: `[AI Insight] ${item.text.slice(0, 180)}...`,
                               };
                               onUpdateLecture({
                                 ...lecture,
                                 notes: [...lecture.notes, newNote],
                               });
-                              alert('AI Insight pinned to your timestamped notes!');
+                              alert('AI Insight pinned to your notes!');
                             }}
                             className="text-[#60A5FA] hover:underline font-semibold"
                           >

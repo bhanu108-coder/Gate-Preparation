@@ -1,6 +1,17 @@
 import React from 'react';
 import { Lecture, PYQQuestion, NavView } from '../types';
-import { TrendingUp, Clock, Flame, PlayCircle, Plus, CheckCircle, ExternalLink, Play } from 'lucide-react';
+import {
+  TrendingUp,
+  Clock,
+  Flame,
+  BookOpen,
+  Plus,
+  CheckCircle,
+  ExternalLink,
+  ArrowRight,
+  Sparkles,
+  Layers,
+} from 'lucide-react';
 
 interface DashboardViewProps {
   onNavigate: (view: NavView) => void;
@@ -139,53 +150,68 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           {/* Lectures Watched */}
           <div className="bg-[#141416] border border-[#27272A] rounded-xl p-6 flex items-center justify-between hover:border-[#3B82F6]/50 transition-all">
             <div>
-              <p className="text-[12px] font-semibold text-[#A1A1AA] mb-1 uppercase tracking-wider">Lectures Watched</p>
+              <p className="text-[12px] font-semibold text-[#A1A1AA] mb-1 uppercase tracking-wider">Topics Mastered</p>
               <p className="text-[28px] font-bold text-[#FAFAFA] tracking-tight">
                 {completedLecturesCount}
                 <span className="text-[16px] text-[#A1A1AA] font-normal ml-1.5">/ {totalLecturesCount}</span>
               </p>
             </div>
             <div className="w-12 h-12 rounded-2xl bg-[#27272A] flex items-center justify-center text-[#A1A1AA]">
-              <PlayCircle className="w-6 h-6 fill-[#71717A]/30 text-[#A1A1AA]" />
+              <Layers className="w-6 h-6 text-[#60A5FA]" />
             </div>
           </div>
         </div>
 
-        {/* Currently Watching (Video Card Placeholder - 6 columns) */}
+        {/* Continue Learning / Active Study Card (6 columns) */}
         <div
           id="currently-watching-card"
           onClick={() => onSelectLecture(currentlyWatching)}
-          className="md:col-span-6 bg-[#141416] border border-[#27272A] rounded-xl overflow-hidden flex flex-col hover:border-[#3B82F6] transition-all cursor-pointer group"
+          className="md:col-span-6 bg-[#141416] border border-[#27272A] rounded-2xl p-6 flex flex-col justify-between hover:border-[#3B82F6] transition-all cursor-pointer group shadow-xs space-y-6"
         >
-          <div className="aspect-video relative bg-gradient-to-br from-[#1F1F23] to-[#0A0A0A] flex items-center justify-center overflow-hidden">
-            <div className="w-14 h-14 rounded-full bg-[#2563EB] flex items-center justify-center shadow-lg transform group-hover:scale-110 transition-transform duration-300">
-              <Play className="w-7 h-7 text-white fill-white ml-1" />
-            </div>
-
-            <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/90 via-black/50 to-transparent flex justify-between items-end">
-              <span className="text-white text-[12px] font-semibold px-2.5 py-1 bg-black/70 rounded backdrop-blur-xs border border-white/10">
-                45:20 / 1:12:00
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-[11px] font-bold text-[#60A5FA] bg-[#2563EB]/15 px-3 py-1 rounded-full border border-[#2563EB]/30 uppercase tracking-wider flex items-center gap-1.5">
+                <BookOpen className="w-3.5 h-3.5" />
+                <span>Continue Study</span>
               </span>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onSelectLecture(currentlyWatching);
-                }}
-                className="text-white text-[12px] font-semibold border border-white/30 px-3 py-1 rounded hover:bg-white/20 transition-colors"
-              >
-                Mark as Watched
-              </button>
+              <span className="text-[12px] font-semibold text-[#A1A1AA] flex items-center gap-1">
+                <Clock className="w-3.5 h-3.5 text-[#71717A]" />
+                <span>{currentlyWatching.duration}</span>
+              </span>
             </div>
-          </div>
 
-          <div className="p-6">
-            <span className="text-[12px] font-bold text-[#60A5FA] uppercase tracking-wider mb-1.5 block">
-              Currently Watching
-            </span>
-            <h3 className="text-[19px] font-bold text-[#FAFAFA] group-hover:text-[#60A5FA] transition-colors leading-snug mb-1">
+            <h3 className="text-[20px] md:text-[22px] font-bold text-[#FAFAFA] group-hover:text-[#60A5FA] transition-colors leading-snug">
               {currentlyWatching.title}
             </h3>
-            <p className="text-[14px] text-[#A1A1AA]">{currentlyWatching.module}</p>
+            <p className="text-[14px] text-[#A1A1AA] mt-1">{currentlyWatching.subject} • {currentlyWatching.module}</p>
+          </div>
+
+          <div className="space-y-3">
+            {/* Progress bar */}
+            <div>
+              <div className="flex justify-between items-center text-[12px] mb-1.5">
+                <span className="text-[#A1A1AA] font-medium">Concept Mastery</span>
+                <span className="font-bold text-[#60A5FA]">{currentlyWatching.progressPercent}%</span>
+              </div>
+              <div className="h-2 w-full bg-[#27272A] rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-[#2563EB] rounded-full transition-all duration-500"
+                  style={{ width: `${currentlyWatching.progressPercent}%` }}
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between pt-1">
+              <div className="flex items-center gap-1.5 text-[12px] text-[#71717A]">
+                <span>{currentlyWatching.concepts.length} key concepts</span>
+                <span>•</span>
+                <span>{currentlyWatching.notes.length} notes</span>
+              </div>
+              <div className="inline-flex items-center gap-1 text-[13px] font-bold text-[#60A5FA] group-hover:translate-x-1 transition-transform">
+                <span>Open Study Room</span>
+                <ArrowRight className="w-4 h-4" />
+              </div>
+            </div>
           </div>
         </div>
 

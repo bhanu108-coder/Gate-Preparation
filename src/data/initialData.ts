@@ -402,6 +402,19 @@ export const initialSchedule: ScheduleItem[] = [
   },
 ];
 
+export const initialSubjects: string[] = [
+  'Digital Logic',
+  'Algorithms',
+  'Data Structures',
+  'OS',
+  'Computer Networks',
+  'Databases',
+  'Discrete Math',
+  'Theory of Computation',
+  'Compiler Design',
+  'COA',
+];
+
 export const avatarUrls = {
   scholar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAw-PqBI5Q1hJE5sZHMww1Ew5edVWoss631WsVu5pqURWfWxMug-v4mOFUO-r0dBJ50pBox-E5VrZ3nAElszi5Ij9xkgWf9tNeXr-mKaxUG2nQCw6ByZFZvdHWU10NQQMW157UnNPpOPZnr_AozlDJ_TWSfnMjuadwg2o-_kD6cibpTpxStNoa9eXWFtlQUGIpJEOpVAd-whUsb7v5ffxJKKZGR0SPLYie5uXiA7HP0SPWaZJsGwA-7',
   logo: 'https://lh3.googleusercontent.com/aida-public/AB6AXuC19SsB-P8PEJd2LbXWddHXSUapbHqrDScJGE6zmLHVy2wlBxvdk8TkIUQ2mcEZ6QrS90rUwcnTPkcd2bJmyagkZ95wuyDHpPmrTuZP_9KhbUqqOxKzqAhA_PnvCsOM9hVXAvpMRNWUJI_7mlrv9GmCzzSUxgC3MblFR6ko2clGpNF2xamMdDwMVZiKttzu7TFLz2vhcFyrYwScohEdkuyZ_aM1m5Fy-DUuf4nkit6vP3txbDzzulbr',

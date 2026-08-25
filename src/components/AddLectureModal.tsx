@@ -1,34 +1,60 @@
 import React, { useState } from 'react';
 import { Lecture } from '../types';
-import { X, Youtube, Plus, Sparkles, Check } from 'lucide-react';
+import { X, Youtube, Plus, Sparkles, Check, BookPlus } from 'lucide-react';
 
 interface AddLectureModalProps {
   isOpen: boolean;
   onClose: () => void;
+  subjects?: string[];
   onAddLecture: (lecture: Lecture) => void;
+  onAddSubject?: (subjectName: string) => void;
 }
 
-export const AddLectureModal: React.FC<AddLectureModalProps> = ({ isOpen, onClose, onAddLecture }) => {
+export const AddLectureModal: React.FC<AddLectureModalProps> = ({
+  isOpen,
+  onClose,
+  subjects = [
+    'Data Structures',
+    'Algorithms',
+    'Digital Logic',
+    'OS',
+    'Computer Networks',
+    'Databases',
+    'Discrete Math',
+  ],
+  onAddLecture,
+  onAddSubject,
+}) => {
   if (!isOpen) return null;
 
   const [title, setTitle] = useState('');
-  const [subject, setSubject] = useState('Data Structures');
+  const [subject, setSubject] = useState(subjects[0] || 'Data Structures');
   const [module, setModule] = useState('Unit 1 • Fundamentals');
   const [videoCount, setVideoCount] = useState(1);
   const [duration, setDuration] = useState('1h 15m');
   const [playlistUrl, setPlaylistUrl] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isCreatingNewSubject, setIsCreatingNewSubject] = useState(false);
+  const [newSubjectInput, setNewSubjectInput] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
+
+    let finalSubject = subject;
+    if (isCreatingNewSubject && newSubjectInput.trim()) {
+      finalSubject = newSubjectInput.trim();
+      if (onAddSubject) {
+        onAddSubject(finalSubject);
+      }
+    }
 
     setIsProcessing(true);
     setTimeout(() => {
       const newLec: Lecture = {
         id: `lec-${Date.now()}`,
         title: title.trim(),
-        subject,
+        subject: finalSubject,
         module,
         videoCount: Number(videoCount) || 1,
         duration: duration || '1h 00m',
@@ -118,22 +144,48 @@ export const AddLectureModal: React.FC<AddLectureModalProps> = ({ isOpen, onClos
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-[12px] font-bold text-[#A1A1AA] uppercase tracking-wider block mb-1">
-                Subject
-              </label>
-              <select
-                value={subject}
-                onChange={(e) => setSubject(e.target.value)}
-                className="w-full px-3 py-2.5 bg-[#18181B] border border-[#27272A] rounded-lg text-[13px] text-[#FAFAFA] focus:border-[#3B82F6] outline-none"
-              >
-                <option value="Data Structures">Data Structures</option>
-                <option value="Algorithms">Algorithms</option>
-                <option value="Digital Logic">Digital Logic</option>
-                <option value="Operating Systems">Operating Systems</option>
-                <option value="Computer Networks">Computer Networks</option>
-                <option value="Databases">Databases</option>
-                <option value="Discrete Math">Discrete Math</option>
-              </select>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-[12px] font-bold text-[#A1A1AA] uppercase tracking-wider block">
+                  Subject
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setIsCreatingNewSubject(!isCreatingNewSubject)}
+                  className="text-[11px] font-bold text-[#60A5FA] hover:underline"
+                >
+                  {isCreatingNewSubject ? 'Select existing' : '+ New Subject'}
+                </button>
+              </div>
+
+              {isCreatingNewSubject ? (
+                <input
+                  type="text"
+                  required
+                  value={newSubjectInput}
+                  onChange={(e) => setNewSubjectInput(e.target.value)}
+                  placeholder="Enter subject name..."
+                  className="w-full px-3 py-2.5 bg-[#18181B] border border-[#3B82F6] rounded-lg text-[13px] text-[#FAFAFA] placeholder:text-[#71717A] focus:ring-1 focus:ring-[#3B82F6] outline-none"
+                />
+              ) : (
+                <select
+                  value={subject}
+                  onChange={(e) => {
+                    if (e.target.value === '__add_new__') {
+                      setIsCreatingNewSubject(true);
+                    } else {
+                      setSubject(e.target.value);
+                    }
+                  }}
+                  className="w-full px-3 py-2.5 bg-[#18181B] border border-[#27272A] rounded-lg text-[13px] text-[#FAFAFA] focus:border-[#3B82F6] outline-none"
+                >
+                  {subjects.map((sub) => (
+                    <option key={sub} value={sub}>
+                      {sub}
+                    </option>
+                  ))}
+                  <option value="__add_new__">+ Add New Subject...</option>
+                </select>
+              )}
             </div>
 
             <div>

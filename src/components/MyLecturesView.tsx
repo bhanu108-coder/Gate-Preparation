@@ -12,22 +12,28 @@ import {
   AlertTriangle,
   X,
   ExternalLink,
+  BookPlus,
 } from 'lucide-react';
+import { AddSubjectModal } from './AddSubjectModal';
 
 interface MyLecturesViewProps {
   lectures: Lecture[];
+  subjects: string[];
   onSelectLecture: (lecture: Lecture) => void;
   onOpenAddLectureModal: () => void;
   onAddLectureFromUrl: (url: string) => void;
   onRemoveLecture: (id: string) => void;
+  onAddSubject: (subjectName: string) => void;
 }
 
 export const MyLecturesView: React.FC<MyLecturesViewProps> = ({
   lectures,
+  subjects,
   onSelectLecture,
   onOpenAddLectureModal,
   onAddLectureFromUrl,
   onRemoveLecture,
+  onAddSubject,
 }) => {
   const [activeSubject, setActiveSubject] = useState<SubjectFilter>('All Subjects');
   const [searchQuery, setSearchQuery] = useState('');
@@ -36,17 +42,12 @@ export const MyLecturesView: React.FC<MyLecturesViewProps> = ({
   const [fetchSuccessMsg, setFetchSuccessMsg] = useState('');
   const [lectureToDelete, setLectureToDelete] = useState<Lecture | null>(null);
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
+  const [isAddSubjectOpen, setIsAddSubjectOpen] = useState(false);
 
-  const subjects: SubjectFilter[] = [
-    'All Subjects',
-    'Digital Logic',
-    'Algorithms',
-    'Data Structures',
-    'OS',
-  ];
+  const allSubjectTabs = ['All Subjects', ...subjects];
 
   const filteredLectures = lectures.filter((lec) => {
-    const matchesSubject = activeSubject === 'All Subjects' || lec.subject === activeSubject;
+    const matchesSubject = activeSubject === 'All Subjects' || lec.subject.toLowerCase() === activeSubject.toLowerCase();
     const matchesSearch =
       searchQuery.trim() === '' ||
       lec.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -150,17 +151,17 @@ export const MyLecturesView: React.FC<MyLecturesViewProps> = ({
       </div>
 
       {/* Filters & Search Row */}
-      <div className="flex flex-col sm:flex-row justify-between items-center gap-4 bg-[#141416] p-2 rounded-xl border border-[#27272A] shadow-xs">
-        <div className="flex overflow-x-auto w-full sm:w-auto hide-scrollbar gap-1.5 p-1">
-          {subjects.map((sub) => {
-            const isActive = activeSubject === sub;
+      <div className="flex flex-col lg:flex-row justify-between items-stretch lg:items-center gap-4 bg-[#141416] p-2.5 rounded-xl border border-[#27272A] shadow-xs">
+        <div className="flex items-center overflow-x-auto hide-scrollbar gap-1.5 p-0.5">
+          {allSubjectTabs.map((sub) => {
+            const isActive = activeSubject.toLowerCase() === sub.toLowerCase();
             return (
               <button
                 key={sub}
                 onClick={() => setActiveSubject(sub)}
-                className={`px-4 py-2 rounded-lg text-[13px] font-semibold tracking-wide whitespace-nowrap transition-all ${
+                className={`px-3.5 py-2 rounded-lg text-[13px] font-semibold tracking-wide whitespace-nowrap transition-all ${
                   isActive
-                    ? 'bg-[#27272A] text-[#FAFAFA] shadow-xs border border-[#3F3F46]'
+                    ? 'bg-[#2563EB] text-white shadow-xs'
                     : 'hover:bg-[#18181B] text-[#A1A1AA] hover:text-[#FAFAFA]'
                 }`}
               >
@@ -168,16 +169,28 @@ export const MyLecturesView: React.FC<MyLecturesViewProps> = ({
               </button>
             );
           })}
+
+          {/* Add Subject Button */}
+          <button
+            id="btn-add-subject-tab"
+            type="button"
+            onClick={() => setIsAddSubjectOpen(true)}
+            className="px-3 py-2 rounded-lg text-[12px] font-bold tracking-wide whitespace-nowrap transition-all border border-dashed border-[#2563EB]/40 text-[#60A5FA] hover:bg-[#2563EB]/15 hover:border-[#3B82F6] flex items-center gap-1.5 shrink-0 ml-1"
+            title="Add a new subject to workspace"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>Add Subject</span>
+          </button>
         </div>
 
-        <div className="relative w-full sm:w-72 shrink-0 p-1">
-          <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-[#71717A]" />
+        <div className="relative w-full lg:w-72 shrink-0">
+          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[#71717A]" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search lectures..."
-            className="w-full bg-[#18181B] border border-[#27272A] rounded-lg pl-10 pr-4 py-2 text-[13px] text-[#FAFAFA] placeholder:text-[#71717A] focus:outline-none focus:border-[#3B82F6] focus:bg-[#141416] focus:ring-1 focus:ring-[#3B82F6] transition-all"
+            className="w-full bg-[#18181B] border border-[#27272A] rounded-lg pl-9 pr-4 py-2 text-[13px] text-[#FAFAFA] placeholder:text-[#71717A] focus:outline-none focus:border-[#3B82F6] focus:bg-[#141416] focus:ring-1 focus:ring-[#3B82F6] transition-all"
           />
         </div>
       </div>
@@ -308,19 +321,52 @@ export const MyLecturesView: React.FC<MyLecturesViewProps> = ({
       </div>
 
       {filteredLectures.length === 0 && (
-        <div className="text-center py-16 bg-[#141416] border border-dashed border-[#27272A] rounded-xl p-8">
-          <p className="text-[16px] text-[#A1A1AA] font-medium">No lectures found matching your criteria.</p>
-          <button
-            onClick={() => {
-              setActiveSubject('All Subjects');
-              setSearchQuery('');
-            }}
-            className="mt-4 text-[#60A5FA] font-semibold text-[13px] hover:underline"
-          >
-            Clear filters
-          </button>
+        <div className="text-center py-16 bg-[#141416] border border-dashed border-[#27272A] rounded-xl p-8 max-w-xl mx-auto space-y-4">
+          <div className="w-12 h-12 rounded-xl bg-[#2563EB]/15 text-[#60A5FA] border border-[#2563EB]/30 flex items-center justify-center mx-auto">
+            <BookPlus className="w-6 h-6" />
+          </div>
+          <div>
+            <p className="text-[16px] text-[#FAFAFA] font-bold">
+              {activeSubject === 'All Subjects'
+                ? 'No lectures found matching your search.'
+                : `No lectures yet under "${activeSubject}".`}
+            </p>
+            <p className="text-[13px] text-[#A1A1AA] mt-1">
+              Add a lecture or playlist to start tracking concept checklists and syllabus coverage.
+            </p>
+          </div>
+
+          <div className="flex items-center justify-center gap-3 pt-2">
+            <button
+              onClick={onOpenAddLectureModal}
+              className="px-4 py-2 bg-[#2563EB] text-white rounded-lg font-semibold text-[13px] hover:bg-[#1D4ED8] transition-colors flex items-center gap-2 shadow-xs"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Add Lecture</span>
+            </button>
+            <button
+              onClick={() => {
+                setActiveSubject('All Subjects');
+                setSearchQuery('');
+              }}
+              className="px-4 py-2 text-[#A1A1AA] hover:text-[#FAFAFA] hover:bg-[#27272A] rounded-lg font-semibold text-[13px] transition-colors"
+            >
+              Reset Filters
+            </button>
+          </div>
         </div>
       )}
+
+      {/* Add Subject Modal */}
+      <AddSubjectModal
+        isOpen={isAddSubjectOpen}
+        onClose={() => setIsAddSubjectOpen(false)}
+        existingSubjects={subjects}
+        onAddSubject={(newSub) => {
+          onAddSubject(newSub);
+          setActiveSubject(newSub);
+        }}
+      />
 
       {/* Confirmation Modal for Removing Lecture */}
       {lectureToDelete && (

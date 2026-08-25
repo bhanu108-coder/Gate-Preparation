@@ -15,28 +15,35 @@ import {
   Sparkles,
   BookOpen,
   Check,
+  Plus,
 } from 'lucide-react';
+import { AddSubjectModal } from './AddSubjectModal';
 
 interface PYQBankViewProps {
   pyqs: PYQQuestion[];
+  subjects?: string[];
   digitizedUploads: DigitizedUpload[];
   onSelectPYQ: (pyq: PYQQuestion) => void;
   onOpenUploadModal: () => void;
   onUpdatePYQ: (updated: PYQQuestion) => void;
+  onAddSubject?: (subjectName: string) => void;
 }
 
 export const PYQBankView: React.FC<PYQBankViewProps> = ({
   pyqs,
+  subjects = ['Digital Logic', 'Algorithms', 'Data Structures', 'OS', 'Computer Networks', 'Databases'],
   digitizedUploads,
   onSelectPYQ,
   onOpenUploadModal,
   onUpdatePYQ,
+  onAddSubject,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFilterStatus, setSelectedFilterStatus] = useState<string>('ALL');
   const [selectedSubjectFilter, setSelectedSubjectFilter] = useState<string>('ALL');
   const [currentPage, setCurrentPage] = useState(1);
   const [showFilterDrawer, setShowFilterDrawer] = useState(false);
+  const [isAddSubjectOpen, setIsAddSubjectOpen] = useState(false);
   const pageSize = 5;
 
   // Counts for Bento stats
@@ -52,7 +59,7 @@ export const PYQBankView: React.FC<PYQBankViewProps> = ({
     if (selectedFilterStatus === 'FLAGGED' && q.status !== 'Flagged') return false;
 
     // Subject filter
-    if (selectedSubjectFilter !== 'ALL' && q.subject !== selectedSubjectFilter) return false;
+    if (selectedSubjectFilter !== 'ALL' && q.subject.toLowerCase() !== selectedSubjectFilter.toLowerCase()) return false;
 
     // Search query
     if (searchQuery.trim() !== '') {
@@ -198,7 +205,7 @@ export const PYQBankView: React.FC<PYQBankViewProps> = ({
       {showFilterDrawer && (
         <div className="bg-[#141416] border border-[#27272A] rounded-xl p-4 flex flex-wrap items-center gap-2 shadow-xs animate-fadeIn">
           <span className="text-[12px] font-bold text-[#A1A1AA] uppercase tracking-wider mr-2">Subject:</span>
-          {['ALL', 'Data Structures', 'Algorithms', 'Operating Systems', 'Computer Networks', 'Databases'].map((sub) => (
+          {['ALL', ...subjects].map((sub) => (
             <button
               key={sub}
               onClick={() => {
@@ -206,7 +213,7 @@ export const PYQBankView: React.FC<PYQBankViewProps> = ({
                 setCurrentPage(1);
               }}
               className={`px-3 py-1.5 rounded-lg text-[12px] font-semibold tracking-wide transition-all ${
-                selectedSubjectFilter === sub
+                selectedSubjectFilter.toLowerCase() === sub.toLowerCase()
                   ? 'bg-[#2563EB] text-white shadow-xs'
                   : 'bg-[#18181B] text-[#A1A1AA] hover:bg-[#27272A] hover:text-[#FAFAFA]'
               }`}
@@ -214,6 +221,16 @@ export const PYQBankView: React.FC<PYQBankViewProps> = ({
               {sub}
             </button>
           ))}
+
+          {onAddSubject && (
+            <button
+              onClick={() => setIsAddSubjectOpen(true)}
+              className="px-2.5 py-1.5 rounded-lg text-[12px] font-bold tracking-wide transition-all border border-dashed border-[#2563EB]/40 text-[#60A5FA] hover:bg-[#2563EB]/15 hover:border-[#3B82F6] flex items-center gap-1 shrink-0 ml-1"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Add Subject</span>
+            </button>
+          )}
         </div>
       )}
 
@@ -473,6 +490,20 @@ export const PYQBankView: React.FC<PYQBankViewProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Add Subject Modal */}
+      {onAddSubject && (
+        <AddSubjectModal
+          isOpen={isAddSubjectOpen}
+          onClose={() => setIsAddSubjectOpen(false)}
+          existingSubjects={subjects}
+          onAddSubject={(newSub) => {
+            onAddSubject(newSub);
+            setSelectedSubjectFilter(newSub);
+            setCurrentPage(1);
+          }}
+        />
+      )}
     </div>
   );
 };
